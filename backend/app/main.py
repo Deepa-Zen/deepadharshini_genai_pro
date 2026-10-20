@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.routers import itinerary, trips
+from app.routers import itinerary, trips, auth, admin
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description="Intelligent AI-powered personalized travel itinerary planning API with Supabase integration."
+    description="Intelligent AI-powered personalized travel itinerary planning API with Supabase integration and Admin Telemetry."
 )
 
 # Enable CORS for React frontend
@@ -19,6 +19,8 @@ app.add_middleware(
 )
 
 # Include Routers
+app.include_router(auth.router, prefix=settings.API_PREFIX)
+app.include_router(admin.router, prefix=settings.API_PREFIX)
 app.include_router(itinerary.router, prefix=settings.API_PREFIX)
 app.include_router(trips.router, prefix=settings.API_PREFIX)
 

@@ -7,6 +7,7 @@ from app.models.itinerary import (
     RefineDayRequest
 )
 from app.services.ai_generator import ai_engine
+from app.services.activity_logger import activity_logger
 
 router = APIRouter(prefix="/itinerary", tags=["Itinerary"])
 
@@ -15,6 +16,13 @@ async def generate_itinerary(preferences: TripPreferences):
     """Generates a complete day-by-day travel itinerary using AI."""
     try:
         itinerary = ai_engine.generate_itinerary(preferences)
+        # Log to live admin activity feed
+        activity_logger.log_activity(
+            user_name=f"Traveler ({preferences.travel_party})",
+            user_email="traveler@wanderai.com",
+            action="Generated Itinerary",
+            details=f"{preferences.duration_days}-Day {preferences.travel_style} trip to {preferences.destination} (${itinerary.total_estimated_cost:,.2f})"
+        )
         return itinerary
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate itinerary: {str(e)}")
@@ -24,6 +32,13 @@ async def refine_itinerary_day(request: RefineDayRequest):
     """Refines and customizes an individual day based on user instructions."""
     try:
         updated_day = ai_engine.refine_day(request)
+        # Log to live admin activity feed
+        activity_logger.log_activity(
+            user_name="Active Traveler",
+            user_email="traveler@wanderai.com",
+            action="AI Day Refinement",
+            details=f"Day {request.day_number} ({request.destination}): '{request.user_instruction[:40]}...'"
+        )
         return updated_day
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to refine day: {str(e)}")
@@ -65,7 +80,7 @@ async def get_preset_scenarios():
                 "group_size": 2,
                 "travel_style": "Romantic",
                 "interests": ["Scenic Views", "Fine Dining", "Art & Architecture", "Relaxation"],
-                "special_requirements": "Unrushed mornings, candlelit dinners, riverside viewpoints"
+                "special_requirements": "Unhurried mornings, candlelit dinners, riverside viewpoints"
             }
         },
         {

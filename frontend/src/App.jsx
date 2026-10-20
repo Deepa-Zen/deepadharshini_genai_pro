@@ -12,9 +12,20 @@ import RefineDayModal from './components/RefineDayModal';
 import SavedTripsDrawer from './components/SavedTripsDrawer';
 import ExportModal from './components/ExportModal';
 import PackingChecklistModal from './components/PackingChecklistModal';
+import AuthModal from './components/AuthModal';
+import AdminDashboard from './components/AdminDashboard';
 import { api } from './services/api';
 
 export default function App() {
+  const [activeView, setActiveView] = useState('traveler'); // 'traveler' | 'admin'
+  const [currentUser, setCurrentUser] = useState({
+    id: 'user-deepa-01',
+    full_name: 'Deepa Traveler',
+    email: 'deepa@wanderai.com',
+    role: 'user',
+    avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Deepa'
+  });
+
   const [currentTrip, setCurrentTrip] = useState(null);
   const [savedTrips, setSavedTrips] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -22,6 +33,7 @@ export default function App() {
   const [health, setHealth] = useState(null);
 
   // Modals & Drawers
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [builderOpen, setBuilderOpen] = useState(false);
   const [savedDrawerOpen, setSavedDrawerOpen] = useState(false);
   const [refineModalOpen, setRefineModalOpen] = useState(false);
@@ -54,8 +66,26 @@ export default function App() {
         origin: { y: 0.6 }
       });
     } catch (e) {
-      // safe fallback if canvas is unavailable
+      // safe fallback
     }
+  };
+
+  // Auth Handlers
+  const handleLoginSuccess = (user) => {
+    setCurrentUser(user);
+    if (user.role === 'admin') {
+      setActiveView('admin');
+      showToast(`Welcome Administrator, ${user.full_name}!`);
+    } else {
+      setActiveView('traveler');
+      showToast(`Welcome back, ${user.full_name}!`);
+    }
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setActiveView('traveler');
+    showToast("Signed out successfully.");
   };
 
   // Generate Itinerary Handler
@@ -159,6 +189,25 @@ export default function App() {
 
       {/* Main Navbar */}
       <Navbar
+        currentUser={currentUser}
+        activeView={activeView}
+        onSwitchView={(v) => {
+          setActiveView(v);
+          if (v === 'admin') {
+            setCurrentUser(prev => (prev?.role === 'admin' ? prev : {
+              id: 'admin-001',
+              full_name: 'System Administrator',
+              email: 'admin@wanderai.com',
+              role: 'admin',
+              avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Admin'
+            }));
+            showToast("Switched to Administrator Command Center");
+          } else {
+            showToast("Switched to Traveler View");
+          }
+        }}
+        onOpenAuth={() => setAuthModalOpen(true)}
+        onLogout={handleLogout}
         onOpenNewTrip={() => setBuilderOpen(true)}
         onOpenSaved={() => setSavedDrawerOpen(true)}
         savedCount={savedTrips.length}
@@ -166,169 +215,187 @@ export default function App() {
       />
 
       <main style={{ maxWidth: 1280, margin: '0 auto' }}>
-        {/* If no trip generated yet, show Welcome Hero & Scenarios */}
-        {!currentTrip ? (
-          <div>
-            {/* Dashboard Hero */}
-            <div className="glass-panel-elevated" style={{
-              padding: '48px 36px',
-              marginBottom: 40,
-              textAlign: 'center',
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
-                <span className="badge badge-indigo">
-                  <Sparkles size={13} />
-                  <span>Enterprise AI Autonomous Travel Agent</span>
-                </span>
-              </div>
-
-              <h1 style={{ fontSize: '2.9rem', maxWidth: 860, margin: '0 auto 16px auto', lineHeight: 1.15 }}>
-                Personalized Day-by-Day Travel Plans in <span className="gradient-text">Seconds</span>
-              </h1>
-
-              <p style={{
-                fontSize: '1.08rem',
-                color: 'var(--text-muted)',
-                maxWidth: 680,
-                margin: '0 auto 30px auto',
-                lineHeight: 1.6
-              }}>
-                Harnessing generative AI, route optimization, and prompt engineering to deliver structured itineraries with attractions, dining, accommodations, and transportation.
-              </p>
-
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
-                <button
-                  onClick={() => setBuilderOpen(true)}
-                  className="gradient-btn"
-                  style={{ fontSize: '1rem', padding: '12px 26px' }}
-                >
-                  <Sparkles size={18} />
-                  <span>Build Custom Trip</span>
-                </button>
-
-                <button
-                  onClick={() => setSavedDrawerOpen(true)}
-                  className="secondary-btn"
-                  style={{ fontSize: '1rem', padding: '12px 24px' }}
-                >
-                  <span>View Saved Trips ({savedTrips.length})</span>
-                </button>
-              </div>
-
-              {/* Feature Highlights Grid */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: 16,
-                marginTop: 40,
-                paddingTop: 32,
-                borderTop: '1px solid var(--border-subtle)',
-                textAlign: 'left'
-              }}>
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <div style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 'var(--radius-sm)',
-                    background: 'rgba(99, 102, 241, 0.15)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}>
-                    <Zap size={18} color="var(--accent-primary)" />
-                  </div>
-                  <div>
-                    <h4 style={{ fontSize: '0.92rem', marginBottom: 2 }}>Zero Decision Fatigue</h4>
-                    <p style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
-                      Automated research, route allocation, and scheduling.
-                    </p>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <div style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 'var(--radius-sm)',
-                    background: 'rgba(6, 182, 212, 0.15)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}>
-                    <Globe size={18} color="var(--accent-cyan)" />
-                  </div>
-                  <div>
-                    <h4 style={{ fontSize: '0.92rem', marginBottom: 2 }}>Curated Recommendations</h4>
-                    <p style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
-                      Local dining gems, hidden spots, and verified transit tips.
-                    </p>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <div style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 'var(--radius-sm)',
-                    background: 'rgba(16, 185, 129, 0.15)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}>
-                    <ShieldCheck size={18} color="var(--accent-emerald)" />
-                  </div>
-                  <div>
-                    <h4 style={{ fontSize: '0.92rem', marginBottom: 2 }}>Dynamic Day Refinement</h4>
-                    <p style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
-                      Tweak or regenerate individual days on the fly.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Presets: 3 Core Project Scenarios */}
-            <ScenarioPresets
-              onSelectScenario={handleGenerateItinerary}
-              loading={loading}
-            />
-          </div>
+        {/* Render Admin Dashboard OR Traveler View */}
+        {activeView === 'admin' ? (
+          <AdminDashboard
+            onBackToUserView={() => setActiveView('traveler')}
+            onInspectTrip={(trip) => {
+              setCurrentTrip(trip);
+              setActiveView('traveler');
+              showToast(`Loaded ${trip.destination} itinerary in Traveler View`);
+            }}
+          />
         ) : (
-          /* Active Itinerary View */
-          <div>
-            <ItineraryView
-              trip={currentTrip}
-              onSaveTrip={handleSaveTrip}
-              onOpenExport={() => setExportModalOpen(true)}
-              onOpenPacking={() => setPackingModalOpen(true)}
-              onEditTrip={() => setBuilderOpen(true)}
-              onOpenRefine={(day) => {
-                setDayToRefine(day);
-                setRefineModalOpen(true);
-              }}
-              isSaved={isCurrentTripSaved}
-              saveLoading={saveLoading}
-            />
+          /* Traveler Side */
+          !currentTrip ? (
+            <div>
+              {/* Dashboard Hero */}
+              <div className="glass-panel-elevated" style={{
+                padding: '48px 36px',
+                marginBottom: 40,
+                textAlign: 'center',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+                  <span className="badge badge-indigo">
+                    <Sparkles size={13} />
+                    <span>AI Autonomous Travel Agent</span>
+                  </span>
+                </div>
 
-            <div style={{ textAlign: 'center', marginTop: 40 }} className="no-print">
-              <button
-                onClick={() => setCurrentTrip(null)}
-                className="secondary-btn"
-                style={{ fontSize: '0.85rem' }}
-              >
-                ← Back to Dashboard & Scenarios
-              </button>
+                <h1 style={{ fontSize: '2.9rem', maxWidth: 860, margin: '0 auto 16px auto', lineHeight: 1.15 }}>
+                  Personalized Day-by-Day Travel Plans in <span className="gradient-text">Seconds</span>
+                </h1>
+
+                <p style={{
+                  fontSize: '1.08rem',
+                  color: 'var(--text-muted)',
+                  maxWidth: 680,
+                  margin: '0 auto 30px auto',
+                  lineHeight: 1.6
+                }}>
+                  Harnessing generative AI, route optimization, and prompt engineering to deliver structured itineraries with attractions, dining, accommodations, and transportation.
+                </p>
+
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => setBuilderOpen(true)}
+                    className="gradient-btn"
+                    style={{ fontSize: '1rem', padding: '12px 26px' }}
+                  >
+                    <Sparkles size={18} />
+                    <span>Build Custom Trip</span>
+                  </button>
+
+                  <button
+                    onClick={() => setSavedDrawerOpen(true)}
+                    className="secondary-btn"
+                    style={{ fontSize: '1rem', padding: '12px 24px' }}
+                  >
+                    <span>View Saved Trips ({savedTrips.length})</span>
+                  </button>
+                </div>
+
+                {/* Feature Highlights Grid */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  gap: 16,
+                  marginTop: 40,
+                  paddingTop: 32,
+                  borderTop: '1px solid var(--border-subtle)',
+                  textAlign: 'left'
+                }}>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <div style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'rgba(99, 102, 241, 0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <Zap size={18} color="var(--accent-primary)" />
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '0.92rem', marginBottom: 2 }}>Zero Decision Fatigue</h4>
+                      <p style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
+                        Automated research, route allocation, and scheduling.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <div style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'rgba(6, 182, 212, 0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <Globe size={18} color="var(--accent-cyan)" />
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '0.92rem', marginBottom: 2 }}>Curated Recommendations</h4>
+                      <p style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
+                        Local dining gems, hidden spots, and verified transit tips.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <div style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <ShieldCheck size={18} color="var(--accent-emerald)" />
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '0.92rem', marginBottom: 2 }}>Dynamic Day Refinement</h4>
+                      <p style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
+                        Tweak or regenerate individual days on the fly.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Presets: 3 Core Project Scenarios */}
+              <ScenarioPresets
+                onSelectScenario={handleGenerateItinerary}
+                loading={loading}
+              />
             </div>
-          </div>
+          ) : (
+            /* Active Itinerary View */
+            <div>
+              <ItineraryView
+                trip={currentTrip}
+                onSaveTrip={handleSaveTrip}
+                onOpenExport={() => setExportModalOpen(true)}
+                onOpenPacking={() => setPackingModalOpen(true)}
+                onEditTrip={() => setBuilderOpen(true)}
+                onOpenRefine={(day) => {
+                  setDayToRefine(day);
+                  setRefineModalOpen(true);
+                }}
+                isSaved={isCurrentTripSaved}
+                saveLoading={saveLoading}
+              />
+
+              <div style={{ textAlign: 'center', marginTop: 40 }} className="no-print">
+                <button
+                  onClick={() => setCurrentTrip(null)}
+                  className="secondary-btn"
+                  style={{ fontSize: '0.85rem' }}
+                >
+                  ← Back to Dashboard & Scenarios
+                </button>
+              </div>
+            </div>
+          )
         )}
       </main>
 
       {/* Modals & Slide-overs */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
+
       <TripBuilderModal
         isOpen={builderOpen}
         onClose={() => setBuilderOpen(false)}

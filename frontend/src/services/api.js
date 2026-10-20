@@ -2,6 +2,69 @@
 const API_BASE = '/api';
 
 export const api = {
+  // Auth
+  async login(email, password, role = 'user') {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, role }),
+    });
+    if (!res.ok) throw new Error("Login failed");
+    return await res.json();
+  },
+
+  async register(full_name, email, password, role = 'user') {
+    const res = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ full_name, email, password, role }),
+    });
+    if (!res.ok) throw new Error("Registration failed");
+    return await res.json();
+  },
+
+  // Admin Telemetry & Real-time Monitoring
+  async getAdminMetrics() {
+    try {
+      const res = await fetch(`${API_BASE}/admin/metrics`);
+      if (!res.ok) throw new Error("Failed to fetch admin metrics");
+      return await res.json();
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  },
+
+  async getLiveActivities() {
+    try {
+      const res = await fetch(`${API_BASE}/admin/activities`);
+      if (!res.ok) throw new Error("Failed to fetch activities");
+      return await res.json();
+    } catch (err) {
+      console.error(err);
+      return [];
+    }
+  },
+
+  async getAllTripsAdmin() {
+    try {
+      const res = await fetch(`${API_BASE}/admin/all-trips`);
+      if (!res.ok) throw new Error("Failed to fetch all trips");
+      return await res.json();
+    } catch (err) {
+      console.error(err);
+      return [];
+    }
+  },
+
+  async adminDeleteTrip(tripId) {
+    const res = await fetch(`${API_BASE}/admin/trips/${tripId}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error("Failed to delete trip");
+    return await res.json();
+  },
+
   // Health & connection status
   async checkHealth() {
     try {

@@ -1,7 +1,7 @@
-# pyrefly: ignore[missing-import]
 from fastapi import APIRouter, HTTPException
 from typing import List, Dict, Any
 from app.services.supabase_client import supabase_service
+from app.services.activity_logger import activity_logger
 
 router = APIRouter(prefix="/trips", tags=["Trips"])
 
@@ -10,6 +10,12 @@ async def save_trip(trip: Dict[str, Any]):
     """Saves a trip itinerary to Supabase / store."""
     try:
         saved = supabase_service.save_trip(trip)
+        activity_logger.log_activity(
+            user_name="Traveler User",
+            user_email="traveler@wanderai.com",
+            action="Saved Trip to Cloud",
+            details=f"Saved '{trip.get('title')}' ({trip.get('destination')}) to database"
+        )
         return {"status": "success", "message": "Trip saved successfully", "trip": saved}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save trip: {str(e)}")
@@ -31,6 +37,12 @@ async def get_trip(trip_id: str):
 async def delete_trip(trip_id: str):
     """Deletes a trip by ID."""
     success = supabase_service.delete_trip(trip_id)
+    activity_logger.log_activity(
+        user_name="Traveler User",
+        user_email="traveler@wanderai.com",
+        action="Deleted Trip",
+        details=f"Trip ID {trip_id} removed by user"
+    )
     return {"status": "success", "message": "Trip deleted successfully"}
 
 @router.get("/{trip_id}/export")
@@ -66,6 +78,13 @@ async def export_trip(trip_id: str):
             if act.get('tips'):
                 lines.append(f"  *Tip: {act.get('tips')}*")
                 
+    activity_logger.log_activity(
+        user_name="Traveler User",
+        user_email="traveler@wanderai.com",
+        action="Exported Itinerary",
+        details=f"Exported plan for '{trip.get('title')}'"
+    )
+
     return {
         "format": "markdown",
         "trip_id": trip_id,
